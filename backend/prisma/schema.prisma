@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// schema.prisma
+
+// Define your database models for the project management tool
+
+// User model represents users of the application
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[] // Each user can have multiple projects
+  tasks     Task[]  
+  comments  Comment[] @relation("UserComments")
+  notifications  Notification[] @relation("UserNotifications")
+  Tokens     Token[]
+  teams      Team[] 
+  role       Role? @relation(fields: [roleId], references: [id])
+  roleId     Int
+}
+
+
+// Project model represents individual projects in the application
+model Project {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  status      ProjectStatus   @default(OPEN)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tasks       Task[]    // Each project can have multiple tasks
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     Int
+  teams      Team[] 
+}
+
+// Task model represents tasks within a project
+model Task {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  status      TaskStatus    @default(OPEN)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  assignee    User?     @relation(fields: [assigneeId], references: [id]) // Provide a unique relation name
+  assigneeId  Int?
+  project     Project   @relation(fields: [projectId], references: [id])
+  projectId   Int
+  comments    Comment[]
+  attachments Attachment[]
+}
+
+// Additional models for comments, attachments, notifications, etc.
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id])
+  taskId    Int
+  author    User     @relation("UserComments", fields: [authorId], references: [id])
+  authorId  Int
+}
+
+model Attachment {
+  id        Int      @id @default(autoincrement())
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id])
+  taskId    Int
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation("UserNotifications", fields: [userId], references: [id])
+  userId    Int
+}
+
+// Additional models for authentication and authorization
+model Role {
+  id          Int         @id @default(autoincrement())
+  name        String      @unique
+  users        User[]
+  permissions Permission[]
+}
+
+model Permission {
+  id   Int       @id @default(autoincrement())
+  name String   
+  role Role?     @relation(fields: [roleId], references: [id])
+  roleId Int?
+}
+
+model Token {
+  id        Int     @id @default(autoincrement())
+  token     String  @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+}
+
+// Additional models for team collaboration
+model Team {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  members     User[]
+  projects    Project[]
+}
+
+// Enum representing the status of a project
+enum ProjectStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+// Enum representing the status of a task
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
